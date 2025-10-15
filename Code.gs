@@ -23,6 +23,7 @@ function onOpen() {
   ui.createMenu('Menu Picker')
     .addItem('Generate Weekly Menu', 'generateAndDisplayMenu')
     .addItem('Setup Weekly Email Trigger', 'setupWeeklyTrigger')
+    .addItem('Configure Email Start Date', 'configureEmailStartDate')
     .addItem('Test Email', 'sendWeeklyMenuEmail')
     .addSeparator()
     .addItem('View Special Dates', 'showSpecialDatesDialog')
@@ -39,6 +40,7 @@ function onOpen() {
 /**
  * Reads data from the three columns (meat, starch, veggie)
  * Assumes data is in columns A, B, C starting from row 2 (row 1 is headers)
+ * Filters out common header labels to account for users labeling their columns
  */
 function getMenuData() {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
@@ -48,9 +50,21 @@ function getMenuData() {
     throw new Error('No menu data found. Please add items to columns A, B, and C.');
   }
   
-  const meats = sheet.getRange(2, 1, lastRow - 1, 1).getValues().flat().filter(item => item !== '');
-  const starches = sheet.getRange(2, 2, lastRow - 1, 1).getValues().flat().filter(item => item !== '');
-  const veggies = sheet.getRange(2, 3, lastRow - 1, 1).getValues().flat().filter(item => item !== '');
+  // Common header words to filter out (case-insensitive)
+  const headerLabels = ['meat', 'starch', 'veggie', 'veggies', 'vegetable', 'vegetables'];
+  
+  // Helper function to filter out header labels and empty items
+  const filterItems = (items) => {
+    return items.filter(item => {
+      if (item === '') return false;
+      const itemLower = String(item).toLowerCase().trim();
+      return !headerLabels.includes(itemLower);
+    });
+  };
+  
+  const meats = filterItems(sheet.getRange(2, 1, lastRow - 1, 1).getValues().flat());
+  const starches = filterItems(sheet.getRange(2, 2, lastRow - 1, 1).getValues().flat());
+  const veggies = filterItems(sheet.getRange(2, 3, lastRow - 1, 1).getValues().flat());
   
   return {
     meats: meats,
@@ -560,7 +574,7 @@ function pickWeeklyMenu(startDate = null) {
     previousMeat = meat; // Update previous meat for next iteration
     
     // Pick starch with max 3 times per week limit
-    let starch = null;
+    starch = null;
     attempts = 0;
     while (starch === null && attempts < maxAttempts) {
       attempts++;
@@ -586,7 +600,7 @@ function pickWeeklyMenu(startDate = null) {
     }
     
     // Pick veggie with max 2 times per week limit
-    let veggie = null;
+    veggie = null;
     attempts = 0;
     while (veggie === null && attempts < maxAttempts) {
       attempts++;
@@ -736,6 +750,23 @@ function formatMenuAsText(menu) {
  */
 function sendWeeklyMenuEmail() {
   try {
+    // Check if we should send emails yet based on start date
+    const startDate = getEmailStartDate();
+    const today = new Date();
+    
+    if (startDate && today < startDate) {
+      Logger.log(`Email not sent. Start date is ${startDate.toLocaleDateString()}, today is ${today.toLocaleDateString()}`);
+      // Don't show alert when running from trigger
+      if (typeof SpreadsheetApp !== 'undefined') {
+        try {
+          SpreadsheetApp.getUi().alert(`Emails will not be sent until ${startDate.toLocaleDateString()}.\n\nCurrent date: ${today.toLocaleDateString()}`);
+        } catch (e) {
+          // Running from trigger, can't show UI
+        }
+      }
+      return;
+    }
+    
     const menu = pickWeeklyMenu();
     const htmlBody = formatMenuAsHTML(menu);
     const textBody = formatMenuAsText(menu);
@@ -752,7 +783,13 @@ function sendWeeklyMenuEmail() {
     });
     
     Logger.log('Weekly menu email sent successfully to: ' + recipientList);
-    SpreadsheetApp.getUi().alert(`Email sent successfully to:\n${recipients.join('\n')}`);
+    
+    // Try to show alert (will fail silently if running from trigger)
+    try {
+      SpreadsheetApp.getUi().alert(`Email sent successfully to:\n${recipients.join('\n')}`);
+    } catch (e) {
+      // Running from trigger, can't show UI
+    };
     
   } catch (error) {
     Logger.log('Error sending email: ' + error.toString());
@@ -809,6 +846,95 @@ function generateAndDisplayMenu() {
 }
 
 /**
+ * Gets the configured email start date
+ */
+function getEmailStartDate() {
+  const props = PropertiesService.getScriptProperties();
+  const startDateStr = props.getProperty('EMAIL_START_DATE');
+  
+  if (startDateStr) {
+    return new Date(startDateStr);
+  }
+  return null;
+}
+
+/**
+ * Saves the email start date
+ */
+function saveEmailStartDate(date) {
+  const props = PropertiesService.getScriptProperties();
+  props.setProperty('EMAIL_START_DATE', date.toISOString());
+}
+
+/**
+ * Clears the email start date
+ */
+function clearEmailStartDate() {
+  const props = PropertiesService.getScriptProperties();
+  props.deleteProperty('EMAIL_START_DATE');
+}
+
+/**
+ * Configures the start date for email sending
+ */
+function configureEmailStartDate() {
+  const ui = SpreadsheetApp.getUi();
+  
+  const currentStartDate = getEmailStartDate();
+  let message = 'Configure Email Start Date\n\n';
+  
+  if (currentStartDate) {
+    message += `Current start date: ${currentStartDate.toLocaleDateString()}\n\n`;
+  } else {
+    message += 'No start date configured (emails send immediately).\n\n';
+  }
+  
+  message += 'Enter a start date (MM/DD/YYYY) or leave blank to send immediately:\n';
+  message += 'Example: 12/25/2025';
+  
+  const response = ui.prompt(
+    'Email Start Date',
+    message,
+    ui.ButtonSet.OK_CANCEL
+  );
+  
+  if (response.getSelectedButton() !== ui.Button.OK) return;
+  
+  const input = response.getResponseText().trim();
+  
+  if (!input) {
+    // Clear start date
+    clearEmailStartDate();
+    ui.alert('Start date cleared. Emails will be sent starting immediately on the next scheduled Friday.');
+    return;
+  }
+  
+  // Parse the date
+  try {
+    const dateParts = input.split('/');
+    if (dateParts.length !== 3) {
+      throw new Error('Invalid format');
+    }
+    
+    const month = parseInt(dateParts[0]) - 1; // Month is 0-indexed
+    const day = parseInt(dateParts[1]);
+    const year = parseInt(dateParts[2]);
+    
+    const startDate = new Date(year, month, day);
+    
+    if (isNaN(startDate.getTime())) {
+      throw new Error('Invalid date');
+    }
+    
+    saveEmailStartDate(startDate);
+    ui.alert(`Email start date set to: ${startDate.toLocaleDateString()}\n\nEmails will only be sent on or after this date.`);
+    
+  } catch (error) {
+    ui.alert('Invalid date format. Please use MM/DD/YYYY format (e.g., 12/25/2025).');
+  }
+}
+
+/**
  * Sets up a weekly trigger to send email every Friday at 9 AM
  */
 function setupWeeklyTrigger() {
@@ -827,7 +953,16 @@ function setupWeeklyTrigger() {
     .atHour(9)
     .create();
   
-  SpreadsheetApp.getUi().alert('Weekly email trigger set up successfully!\nEmails will be sent every Friday at 9:00 AM.');
+  const startDate = getEmailStartDate();
+  let message = 'Weekly email trigger set up successfully!\nEmails will be sent every Friday at 9:00 AM';
+  
+  if (startDate) {
+    message += `\n\nStart date: ${startDate.toLocaleDateString()}\nEmails will only be sent on or after this date.`;
+  } else {
+    message += '.\n\nNo start date configured. Emails will begin immediately.';
+  }
+  
+  SpreadsheetApp.getUi().alert(message);
 }
 
 /**

@@ -2,6 +2,8 @@
 
 Copy this data into your Google Sheet to get started quickly!
 
+**Tip:** You can add header labels in Row 1 (like "Meat", "Starch", "Veggie") and the script will automatically ignore them. The script filters out common header words: meat, starch, veggie, veggies, vegetable, vegetables.
+
 ## Column A - Meat
 ```
 Chicken Breast
@@ -208,3 +210,45 @@ The email automatically adapts to your device:
 - Easy-to-read fonts
 - Color-coded special occasions
 - Emoji indicators (🎉) for special dates
+
+## Configuring Email Start Date
+
+### Default Behavior
+**By default, emails start immediately on the next scheduled Friday.** You don't need to configure a start date unless you want to delay sending.
+
+### When to Use
+This optional feature is useful if you want to:
+- **Setup in advance**: Configure the system now but start sending emails later
+- **Vacation mode**: Temporarily pause emails by setting a future start date
+- **Seasonal planning**: Start meal planning when school/work schedule changes
+
+### Example Scenarios
+
+**Scenario 1: Set up now, start next month**
+```
+Menu Picker → Configure Email Start Date
+Enter: 11/01/2025
+Result: Trigger is active but emails won't send until November 1st
+```
+
+**Scenario 2: Pause for vacation**
+```
+Current: Emails sending weekly
+Action: Set start date to 12/20/2025
+Result: No emails sent until December 20th, then resumes
+```
+
+**Scenario 3: Resume immediately (Default)**
+```
+Current: Start date set to future
+Action: Menu Picker → Configure Email Start Date → Leave blank and click OK
+Result: Start date cleared - emails resume on next Friday (immediate/default mode)
+```
+
+### How It Works
+1. **Default**: No start date is configured, emails send immediately
+2. The weekly trigger runs every Friday at 9 AM (always active)
+3. **If start date configured**: Checks if today's date >= configured start date
+4. Before start date: No email is sent (logged only)
+5. After start date: Emails send normally every Friday
+6. **Most users don't need to set a start date** - it's only for delayed/paused scenarios

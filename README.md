@@ -14,10 +14,11 @@ A Google Sheets Add-on that automatically generates a weekly menu by selecting i
   - Starches: Maximum 3 times per week each
   - Veggies: Maximum 2 times per week each
 - 🎉 **Special Dates Support**: Set specific meals for birthdays, anniversaries, or other special occasions
-- � **Meal History Tracking**: Remembers past 8 weeks and avoids repetitive meal combinations
+- 📜 **Meal History Tracking**: Remembers past 8 weeks and avoids repetitive meal combinations
 - 👥 **Multiple Email Recipients**: Send to family members, roommates, or anyone on your list
 - 📱 **Mobile-Friendly**: Responsive email design that looks great on phones and tablets
-- �📧 Automatically emails the weekly menu every Friday at 9 AM
+- 📅 **Configurable Start Date**: Set when emails should begin being sent
+- 📧 Automatically emails the weekly menu every Friday at 9 AM
 - 🎨 Formatted HTML email with a clean table layout highlighting special dates
 - 📅 Menu starts on Sunday and covers 7 days
 - 🚫 No meat repeated on consecutive days
@@ -32,8 +33,10 @@ A Google Sheets Add-on that automatically generates a weekly menu by selecting i
    - **Column A (Meat)**: List your meat options (e.g., "Chicken Breast", "Pork Chops", "Fish Fillet", "Shrimp")
    - **Column B (Starch)**: List your starch options (e.g., "Rice", "Pasta", "Potatoes")
    - **Column C (Veggie)**: List your vegetable options (e.g., "Broccoli", "Carrots", "Green Beans")
-3. Add headers in Row 1 (optional but recommended): "Meat", "Starch", "Veggie"
+3. Add headers in Row 1 (optional): "Meat", "Starch", "Veggie" - these will be automatically ignored
 4. Start your data from Row 2
+
+**Note:** The script automatically filters out common header labels (meat, starch, veggie, veggies, vegetable, vegetables) so you can label your columns however you like.
 
 **Example:**
 ```
@@ -56,25 +59,27 @@ A Google Sheets Add-on that automatically generates a weekly menu by selecting i
 4. Click the **Save** icon (💾) or press `Cmd+S` (Mac) / `Ctrl+S` (Windows)
 5. Name your project (e.g., "Menu Picker")
 
-### Step 3: Configure the Script Settings
+### Step 3: Add the Configuration File (appsscript.json)
 
-1. In the Apps Script editor, click on the **Project Settings** (⚙️ gear icon)
-2. Scroll down to **Script Properties** (optional - for advanced configuration)
-3. Go back to the **Editor** tab
+1. In the Apps Script editor, click on **Project Settings** (⚙️ gear icon)
+2. Check the box **"Show 'appsscript.json' manifest file in editor"**
+3. Go back to **Editor** tab
+4. Click on `appsscript.json` in the files list
+5. Replace its contents with the contents from the `appsscript.json` file in this repository
+6. **Important:** Update the `timeZone` field to match your timezone (e.g., "America/Los_Angeles", "America/New_York", "Europe/London", "Asia/Tokyo")
+7. Save the file
 
-### Step 4: Add the Configuration File
+**Required OAuth Scopes (already configured in appsscript.json):**
+```json
+"oauthScopes": [
+  "https://www.googleapis.com/auth/spreadsheets.currentonly",
+  "https://www.googleapis.com/auth/script.send_mail",
+  "https://www.googleapis.com/auth/script.scriptapp",
+  "https://www.googleapis.com/auth/userinfo.email"
+]
+```
 
-1. In the Apps Script editor, click the **+** next to Files
-2. Select **Script**
-3. Actually, for `appsscript.json`:
-   - Click on **Project Settings** (⚙️)
-   - Check the box "Show 'appsscript.json' manifest file in editor"
-   - Go back to **Editor**
-   - You should now see `appsscript.json` in the files list
-4. Click on `appsscript.json` and replace its contents with the contents from the `appsscript.json` file
-5. **Important:** Update the `timeZone` field to match your timezone (e.g., "America/Los_Angeles", "Europe/London", "Asia/Tokyo")
-
-### Step 5: Authorize the Script
+### Step 4: Authorize the Script
 
 1. In the Apps Script editor, select the `onOpen` function from the dropdown at the top
 2. Click the **Run** button (▶️)
@@ -83,7 +88,13 @@ A Google Sheets Add-on that automatically generates a weekly menu by selecting i
 5. Click **Advanced** → **Go to [Your Project Name] (unsafe)**
 6. Click **Allow** to grant the necessary permissions
 
-### Step 6: Set Up the Weekly Email Trigger
+**Permissions Explained:**
+- **Spreadsheets**: Read menu data from columns A, B, C
+- **Send Email**: Send weekly menu emails
+- **Script App**: Create and manage time-based triggers
+- **User Email**: Get your email address for default recipient
+
+### Step 5: Set Up the Weekly Email Trigger
 
 1. Close the Apps Script editor and return to your Google Sheet
 2. Refresh the page - you should see a new menu called **Menu Picker**
@@ -106,11 +117,30 @@ To test sending an email:
 
 ### Automatic Weekly Emails
 
-Once you've set up the trigger (Step 6), the extension will automatically:
-- Generate a new weekly menu every Friday at 9:00 AM
+Once you've set up the trigger (Step 5), the extension will automatically:
+- **Start sending emails immediately** on the next Friday at 9:00 AM
+- Generate a new weekly menu each week
 - Send it to your email address
 - The menu will cover the upcoming week starting from Sunday
 - Check for special dates and include special meals automatically
+
+### Configure Email Start Date (Optional)
+
+**By default, emails start immediately.** Only use this if you want to delay when emails begin.
+
+To delay email sending to a future date:
+
+1. Click **Menu Picker** → **Configure Email Start Date**
+2. Enter a date in MM/DD/YYYY format (e.g., 12/25/2025)
+3. The trigger will run weekly, but emails will only be sent on or after this date
+4. To resume immediate sending, leave the field blank and click OK
+
+**Use Cases:**
+- Set up the system now but start emails later (e.g., after vacation)
+- Temporarily pause emails by setting a future date
+- Resume immediate sending by clearing the start date
+
+**Note:** By default, no start date is set and emails begin immediately. The trigger runs every Friday at 9 AM and checks the start date before sending (if one is configured).
 
 ## Managing Special Dates
 
@@ -214,16 +244,33 @@ To change when the email is sent:
 
 ## Troubleshooting
 
+### Permission Errors
+
+**Error: "Specified permissions are not sufficient to call Session.getActiveUser"**
+
+This means the script needs re-authorization with updated permissions:
+
+1. Open Apps Script editor
+2. Ensure `appsscript.json` includes all required OAuth scopes (see Step 4)
+3. Save the file
+4. Run the `onOpen` function again
+5. Click "Review Permissions" and re-authorize
+6. The error should be resolved
+
+**Why this happens:** The script needs permission to access your email address for default recipient setup.
+
 ### Menu Not Generating
 
 - **Check your data**: Ensure you have items in columns A, B, and C starting from row 2
 - **Check for empty rows**: Make sure there are no completely empty rows in your data
+- **Minimum requirements**: At least 7 meats, 4 starches, and 4 veggies recommended
 
 ### Email Not Sending
 
-- **Check authorization**: Re-run the authorization process (Step 5)
+- **Check authorization**: Re-run the authorization process (Step 4) with all required permissions
 - **Check trigger**: Go to Apps Script → **Triggers** (⏰) to verify the trigger is set up
-- **Check email address**: Verify the email address in the code
+- **Check email recipients**: Use Menu Picker → Manage Email Recipients to verify addresses
+- **Check start date**: Use Menu Picker → Configure Email Start Date to ensure no future date is blocking emails
 
 ### Limits Not Working
 
@@ -232,6 +279,7 @@ To change when the email is sent:
   - Items containing "pork" → counted as pork
   - Items containing "fish" → counted as fish
   - Items containing "shrimp" → counted as shrimp
+  - Items containing "beef" → counted as beef
 - **Case insensitive**: "Chicken", "chicken", and "CHICKEN" all work
 - **Be specific**: If you want items counted properly, include the meat type in the name
 
@@ -247,23 +295,35 @@ If you need to remove all automatic triggers:
 
 ```
 menu_picker/
-├── Code.gs              # Main Google Apps Script code
-├── appsscript.json      # Project configuration and permissions
-└── README.md            # This file
+├── Code.gs              # Main Google Apps Script code (966 lines)
+├── appsscript.json      # Project configuration and OAuth permissions
+├── README.md            # Complete documentation and setup guide
+└── EXAMPLE_DATA.md      # Sample data and usage examples
 ```
 
 ## Privacy & Permissions
 
-This extension requires the following permissions:
-- **Spreadsheets**: To read your menu data
-- **Send Email**: To send the weekly menu via Gmail
-- **Script App**: To set up time-based triggers
+This extension requires the following permissions (configured in `appsscript.json`):
 
-Your data never leaves Google's servers and is not shared with any third parties.
+- **`spreadsheets.currentonly`**: Read your menu data from columns A, B, C
+- **`script.send_mail`**: Send the weekly menu via Gmail
+- **`script.scriptapp`**: Create and manage time-based triggers for automation
+- **`userinfo.email`**: Get your email address for default recipient configuration
+
+**Privacy Guarantee:**
+- All data stays within your Google account
+- No external servers or third-party services
+- No data collection or tracking
+- Open source - you can review all code
+- Runs entirely within Google Apps Script environment
 
 ## Support
 
-If you encounter any issues or have questions, please check the troubleshooting section above or review the code comments in `Code.gs`.
+If you encounter any issues or have questions:
+1. Check the **Troubleshooting** section above
+2. Review the code comments in `Code.gs`
+3. Check `EXAMPLE_DATA.md` for usage examples
+4. Verify all OAuth scopes are configured in `appsscript.json`
 
 ## License
 
