@@ -157,12 +157,28 @@ When a special date falls in your menu week:
 
 ## Managing Multiple Recipients
 
-### Example Setup
+### Adding Recipients
 ```
 Menu Picker → Manage Email Recipients
 Enter: mom@family.com, dad@family.com, sister@family.com
 
 Result: All three people will receive the weekly menu email every Friday at 9 AM
+```
+
+### Removing a Recipient
+```
+Menu Picker → Remove Email Recipient
+
+Current list shows:
+1. mom@family.com
+2. dad@family.com
+3. sister@family.com
+
+Enter: 2 (or "dad@family.com")
+
+Result: dad@family.com removed. Emails now sent to:
+- mom@family.com
+- sister@family.com
 ```
 
 ### Use Cases

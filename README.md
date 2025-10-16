@@ -166,12 +166,23 @@ To delay email sending to a future date:
 
 ## Managing Email Recipients
 
-### Setting Up Recipients
+### Adding or Updating Recipients
 
 1. Click **Menu Picker** → **Manage Email Recipients**
 2. View current recipients list
 3. Enter new email addresses separated by commas (e.g., `mom@email.com, dad@email.com, me@email.com`)
 4. Click OK to save
+
+**Note:** This replaces the entire list with the new addresses you enter.
+
+### Removing a Recipient
+
+1. Click **Menu Picker** → **Remove Email Recipient**
+2. View the numbered list of current recipients
+3. Enter either:
+   - The number of the recipient to remove (e.g., `2`)
+   - The email address to remove (e.g., `dad@email.com`)
+4. Click OK to confirm
 
 **Default:** If no recipients are set, emails will be sent to the Google account running the script.
 
@@ -295,7 +306,7 @@ If you need to remove all automatic triggers:
 
 ```
 menu_picker/
-├── Code.gs              # Main Google Apps Script code (992 lines)
+├── Code.gs              # Main Google Apps Script code (1062 lines)
 ├── appsscript.json      # Project configuration and OAuth permissions
 ├── README.md            # Complete documentation and setup guide
 └── EXAMPLE_DATA.md      # Sample data and usage examples

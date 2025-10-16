@@ -47,6 +47,7 @@ function onOpen() {
     .addItem('Clear Meal History', 'clearMealHistory')
     .addSeparator()
     .addItem('Manage Email Recipients', 'manageEmailRecipients')
+    .addItem('Remove Email Recipient', 'removeEmailRecipient')
     .addToUi();
 }
 
@@ -410,6 +411,75 @@ function manageEmailRecipients() {
       ui.alert('No valid email addresses entered.');
     }
   }
+}
+
+/**
+ * Removes a specific email recipient from the list
+ */
+function removeEmailRecipient() {
+  const ui = SpreadsheetApp.getUi();
+  const currentRecipients = getEmailRecipients();
+  
+  if (currentRecipients.length === 0) {
+    ui.alert('No email recipients to remove.');
+    return;
+  }
+  
+  if (currentRecipients.length === 1) {
+    const response = ui.alert(
+      'Remove Last Recipient',
+      `This is the only recipient: ${currentRecipients[0]}\n\nIf you remove this, emails will default to: ${Session.getActiveUser().getEmail()}\n\nDo you want to continue?`,
+      ui.ButtonSet.YES_NO
+    );
+    
+    if (response === ui.Button.YES) {
+      saveEmailRecipients([Session.getActiveUser().getEmail()]);
+      ui.alert('Recipient removed. Emails will now be sent to your account only.');
+    }
+    return;
+  }
+  
+  let message = 'Current Email Recipients:\n\n';
+  currentRecipients.forEach((email, index) => {
+    message += `${index + 1}. ${email}\n`;
+  });
+  message += '\nEnter the number of the recipient to remove (or email address):';
+  
+  const response = ui.prompt(
+    'Remove Email Recipient',
+    message,
+    ui.ButtonSet.OK_CANCEL
+  );
+  
+  if (response.getSelectedButton() !== ui.Button.OK) return;
+  
+  const input = response.getResponseText().trim();
+  
+  // Check if input is a number (index)
+  const index = parseInt(input);
+  let removedEmail = null;
+  
+  if (!isNaN(index) && index >= 1 && index <= currentRecipients.length) {
+    // Remove by index
+    removedEmail = currentRecipients[index - 1];
+    currentRecipients.splice(index - 1, 1);
+  } else {
+    // Try to find by email address
+    const emailIndex = currentRecipients.findIndex(email => 
+      email.toLowerCase() === input.toLowerCase()
+    );
+    
+    if (emailIndex !== -1) {
+      removedEmail = currentRecipients[emailIndex];
+      currentRecipients.splice(emailIndex, 1);
+    } else {
+      ui.alert('Invalid input. Please enter a valid number or email address.');
+      return;
+    }
+  }
+  
+  saveEmailRecipients(currentRecipients);
+  ui.alert(`Removed: ${removedEmail}\n\nRemaining recipients:\n${currentRecipients.join('\n')}`);
 }
 
 /**
