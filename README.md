@@ -1,6 +1,6 @@
 # Menu Picker - Google Sheets Extension
 
-A Google Sheets Add-on that automatically generates a weekly menu by selecting items from three categories (meat, starch, and veggie) while respecting weekly limits for specific meat types. The extension sends a formatted email every Friday at 9 AM with the upcoming week's menu.
+A Google Sheets extension that automatically generates a weekly menu by selecting items from three categories (meat, starch, and veggie) while respecting weekly limits for specific meat types. The extension sends a formatted email every Friday at 9 AM with the upcoming week's menu.
 
 ## Features
 
@@ -118,7 +118,7 @@ To test sending an email:
 ### Automatic Weekly Emails
 
 Once you've set up the trigger (Step 5), the extension will automatically:
-- **Start sending emails immediately** on the next Friday at 9:00 AM
+- **Start sending emails immediately** on the next Friday at 9 AM
 - Generate a new weekly menu each week
 - Send it to your email address
 - The menu will cover the upcoming week starting from Sunday
@@ -295,7 +295,7 @@ If you need to remove all automatic triggers:
 
 ```
 menu_picker/
-├── Code.gs              # Main Google Apps Script code (966 lines)
+├── Code.gs              # Main Google Apps Script code (992 lines)
 ├── appsscript.json      # Project configuration and OAuth permissions
 ├── README.md            # Complete documentation and setup guide
 └── EXAMPLE_DATA.md      # Sample data and usage examples

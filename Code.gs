@@ -1,7 +1,20 @@
 /**
  * Menu Picker for Google Sheets
- * This script picks a weekly menu from three columns (meat, starch, veggie)
- * while respecting weekly limits for specific meat types.
+ * 
+ * Automatically generates weekly menus from three columns (meat, starch, veggie) with:
+ * - Weekly limits for specific meat types (chicken, pork, fish, shrimp, beef)
+ * - No consecutive day repeats for meats
+ * - Each meat item used only once per week
+ * - Starch limit: 3 times per week each
+ * - Veggie limit: 2 times per week each
+ * - Special dates support for birthdays/holidays
+ * - 8-week meal history tracking
+ * - Multiple email recipients
+ * - Mobile-friendly responsive email design
+ * - Weekly automation (Friday 9 AM)
+ * - Configurable email start dates
+ * 
+ * Automatically filters common header labels: meat, starch, veggie, veggies, vegetable, vegetables
  */
 
 // Configuration constants
@@ -39,8 +52,8 @@ function onOpen() {
 
 /**
  * Reads data from the three columns (meat, starch, veggie)
- * Assumes data is in columns A, B, C starting from row 2 (row 1 is headers)
- * Filters out common header labels to account for users labeling their columns
+ * Reads from columns A, B, C starting from row 2
+ * Automatically filters out common header labels (meat, starch, veggie, veggies, vegetable, vegetables)
  */
 function getMenuData() {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
@@ -420,6 +433,7 @@ function getMeatType(meatItem) {
  * ensuring each specific meat item is used only once per week,
  * ensuring starches appear max 3 times per week,
  * ensuring veggies appear max 2 times per week,
+ * avoiding recently used meal combinations (last 4 weeks),
  * and checking for special dates/meals
  */
 function pickWeeklyMenu(startDate = null) {
@@ -954,7 +968,7 @@ function setupWeeklyTrigger() {
     .create();
   
   const startDate = getEmailStartDate();
-  let message = 'Weekly email trigger set up successfully!\nEmails will be sent every Friday at 9:00 AM';
+  let message = 'Weekly email trigger set up successfully!\nEmails will be sent every Friday at 9 AM';
   
   if (startDate) {
     message += `\n\nStart date: ${startDate.toLocaleDateString()}\nEmails will only be sent on or after this date.`;
