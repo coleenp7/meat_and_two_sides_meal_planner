@@ -11,6 +11,7 @@ Chicken Thighs
 Grilled Chicken
 Pork Chops
 Pork Tenderloin
+Baked Ham
 Fish Fillet
 Salmon
 Shrimp
@@ -20,9 +21,18 @@ Turkey Breast
 Tilapia
 ```
 
-**Note:** Beef is currently set to 0 times per week (disabled). To enable beef, edit the LIMITS in Code.gs and change `'beef': 0` to your desired limit (e.g., `'beef': 2`).
+**CRITICAL - Meat Type Requirements:**
+The system requires EXACT counts each week (not maximums):
+- **Minimum 3 chicken items** required (chicken appears exactly 3 times/week)
+- **Minimum 2 pork/ham items** required (pork appears exactly 2 times/week)
+- **Minimum 1 fish item** required (fish appears exactly 1 time/week)
+- **Minimum 1 shrimp item** required (shrimp appears exactly 1 time/week)
 
-**Important:** You need at least 7 different meats since each specific meat can only be used once per week!
+**Ham Counts as Pork:** Items containing "ham" (like "Baked Ham", "Honey Ham", "Ham Steak") count toward the pork requirement.
+
+**Beef:** Currently disabled (0 times/week). To enable beef, edit LIMITS in Code.gs and adjust counts so they total 7 days.
+
+**Each specific meat used only once per week:** Even though chicken appears 3 times, each must be a different chicken item!
 
 ## Column B - Starch
 ```
@@ -82,15 +92,18 @@ When you run the menu picker, you'll get something like this:
 | Saturday  | 10/26/2025 | Pork Tenderloin| Risotto       | Mixed Salad     |         |
 
 ### Constraint Verification:
-- ✅ Chicken appears 3 times (Chicken Breast, Grilled Chicken, Chicken Thighs) - within the 3-time limit
-- ✅ Pork appears 2 times (Pork Chops, Pork Tenderloin) - within the 2-time limit
-- ✅ Fish appears 1 time (Fish Fillet) - within the 1-time limit
-- ✅ Shrimp appears 0 times - within the 1-time limit
-- ✅ Beef appears 0 times - limit is set to 0
-- ✅ No meat repeated on consecutive days
-- ✅ Each specific meat used only once
+- ✅ Chicken appears **exactly 3 times** (Chicken Breast, Grilled Chicken, Chicken Thighs) - **REQUIRED**
+- ✅ Pork appears **exactly 2 times** (Pork Chops, Pork Tenderloin) - **REQUIRED**
+  - **Note:** Ham items would also count toward this pork requirement
+- ✅ Fish appears **exactly 1 time** (Fish Fillet) - **REQUIRED**
+- ✅ Shrimp appears **exactly 1 time** (would need to add Shrimp to this week's menu) - **REQUIRED**
+- ✅ Beef appears **exactly 0 times** - disabled by default
+- ✅ No meat TYPE repeated on consecutive days
+- ✅ Each specific meat item used only once
 - ✅ No starch appears more than 3 times
 - ✅ No veggie appears more than 2 times
+
+**Total: 3 chicken + 2 pork + 1 fish + 1 shrimp + 0 beef = 7 days per week**
 
 ## Example Special Dates
 

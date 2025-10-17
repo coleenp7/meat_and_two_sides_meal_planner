@@ -1,16 +1,16 @@
 # Menu Picker - Google Sheets Extension
 
-A Google Sheets extension that automatically generates a weekly menu by selecting items from three categories (meat, starch, and veggie) while respecting weekly limits for specific meat types. The extension sends a formatted email every Friday at 9 AM with the upcoming week's menu.
+A Google Sheets extension that automatically generates a weekly menu by selecting items from three categories (meat, starch, and veggie) while enforcing exact weekly requirements for specific meat types (3 chicken, 2 pork, 1 fish, 1 shrimp). The extension sends a formatted email every Friday at 9 AM with the upcoming week's menu.
 
 ## Features
 
 - 📋 Picks one item from each category: Meat, Starch, and Veggie
-- 🔢 Enforces weekly limits:
-  - Chicken: Maximum 3 times per week
-  - Pork: Maximum 2 times per week
-  - Fish: Maximum 1 time per week
-  - Shrimp: Maximum 1 time per week
-  - Beef: Maximum 0 times per week (configurable)
+- 🔢 **Enforces EXACT weekly meat requirements** (not maximums):
+  - **Chicken: Exactly 3 times per week** (required)
+  - **Pork (includes ham): Exactly 2 times per week** (required)
+  - **Fish: Exactly 1 time per week** (required)
+  - **Shrimp: Exactly 1 time per week** (required)
+  - **Beef: 0 times per week** (disabled by default, configurable)
   - Starches: Maximum 3 times per week each
   - Veggies: Maximum 2 times per week each
 - 🎉 **Special Dates Support**: Set specific meals for birthdays, anniversaries, or other special occasions
@@ -21,7 +21,7 @@ A Google Sheets extension that automatically generates a weekly menu by selectin
 - 📧 Automatically emails the weekly menu every Friday at 9 AM
 - 🎨 Formatted HTML email with a clean table layout highlighting special dates
 - 📅 Menu starts on Sunday and covers 7 days
-- 🚫 No meat repeated on consecutive days
+- 🚫 No meat TYPE repeated on consecutive days (e.g., no chicken two days in a row)
 - ✅ Each specific meat item used only once per week
 
 ## Installation Instructions
@@ -218,21 +218,24 @@ Emails are automatically optimized for mobile devices:
 - Responsive fonts and padding adjust to screen size
 - Special dates highlighted in gold on all devices
 
-### Modify Meat Type Limits
+### Modify Meat Type Requirements
 
-To change the weekly limits for meat types:
+**IMPORTANT:** These are REQUIRED counts (not maximums). Each week will have exactly these numbers.
+
+To change the weekly requirements for meat types:
 
 1. Open the Apps Script editor
 2. Find the `LIMITS` constant at the top of the code
-3. Modify the values:
+3. Modify the values (must total 7 days):
    ```javascript
    const LIMITS = {
-     'chicken': 3,  // Change this number
-     'pork': 2,     // Change this number
-     'fish': 1,     // Change this number
-     'shrimp': 1,   // Change this number
-     'beef': 0      // Change to 2 or more to allow beef
+     'chicken': 3,  // MUST appear 3 times per week
+     'pork': 2,     // MUST appear 2 times per week (includes ham)
+     'fish': 1,     // MUST appear 1 time per week
+     'shrimp': 1,   // MUST appear 1 time per week
+     'beef': 0      // Set to 1 or 2 to include beef (must still total 7)
    };
+   // Example: To add beef, you might change to: chicken:2, pork:2, fish:1, shrimp:1, beef:1 = 7 days
    ```
 
 ### Change Email Schedule
@@ -274,7 +277,13 @@ This means the script needs re-authorization with updated permissions:
 
 - **Check your data**: Ensure you have items in columns A, B, and C starting from row 2
 - **Check for empty rows**: Make sure there are no completely empty rows in your data
-- **Minimum requirements**: At least 7 meats, 4 starches, and 4 veggies recommended
+- **CRITICAL - Minimum meat requirements by type**:
+  - **At least 3 chicken items** (chicken must appear 3 times/week)
+  - **At least 2 pork/ham items** (pork must appear 2 times/week)
+  - **At least 1 fish item** (fish must appear 1 time/week)
+  - **At least 1 shrimp item** (shrimp must appear 1 time/week)
+  - Minimum 4 starches and 4 veggies recommended
+- **Error message**: If you see "Not enough [type] options", add more items of that meat type to column A
 
 ### Email Not Sending
 
@@ -287,11 +296,12 @@ This means the script needs re-authorization with updated permissions:
 
 - **Check meat names**: The script identifies meat types by looking for keywords in the item names:
   - Items containing "chicken" → counted as chicken
-  - Items containing "pork" → counted as pork
+  - Items containing "pork" or "ham" → counted as pork
   - Items containing "fish" → counted as fish
   - Items containing "shrimp" → counted as shrimp
   - Items containing "beef" → counted as beef
 - **Case insensitive**: "Chicken", "chicken", and "CHICKEN" all work
+- **Ham is pork**: "Ham", "Honey Ham", "Ham Steak" all count toward the pork requirement
 - **Be specific**: If you want items counted properly, include the meat type in the name
 
 ### Deleting All Triggers
@@ -306,7 +316,7 @@ If you need to remove all automatic triggers:
 
 ```
 menu_picker/
-├── Code.gs              # Main Google Apps Script code (1062 lines)
+├── Code.gs              # Main Google Apps Script code (1118 lines)
 ├── appsscript.json      # Project configuration and OAuth permissions
 ├── README.md            # Complete documentation and setup guide
 └── EXAMPLE_DATA.md      # Sample data and usage examples

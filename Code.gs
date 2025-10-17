@@ -2,11 +2,11 @@
  * Menu Picker for Google Sheets
  * 
  * Automatically generates weekly menus from three columns (meat, starch, veggie) with:
- * - Weekly limits for specific meat types (chicken, pork, fish, shrimp, beef)
+ * - REQUIRED meat type counts each week (chicken: 3, pork/ham: 2, fish: 1, shrimp: 1, beef: 0)
  * - No consecutive day repeats for meats
- * - Each meat item used only once per week
- * - Starch limit: 3 times per week each
- * - Veggie limit: 2 times per week each
+ * - Each specific meat item used only once per week
+ * - Starch limit: max 3 times per week each
+ * - Veggie limit: max 2 times per week each
  * - Special dates support for birthdays/holidays
  * - 8-week meal history tracking
  * - Multiple email recipients
@@ -14,17 +14,26 @@
  * - Weekly automation (Friday 9 AM)
  * - Configurable email start dates
  * 
+ * IMPORTANT: Meat counts are REQUIRED, not maximums. Each week will have:
+ * - Exactly 3 chicken meals
+ * - Exactly 2 pork meals (ham counts as pork)
+ * - Exactly 1 fish meal
+ * - Exactly 1 shrimp meal
+ * Total = 7 days. Beef is disabled by default but can be configured.
+ * 
  * Automatically filters common header labels: meat, starch, veggie, veggies, vegetable, vegetables
  */
 
 // Configuration constants
+// These are REQUIRED counts - each type must appear exactly this many times per week
 const LIMITS = {
-  'chicken': 3,
-  'pork': 2,
-  'fish': 1,
-  'shrimp': 1,
-  'beef': 0  // Set to 0 to exclude beef, increase to allow beef (e.g., 2)
+  'chicken': 3,  // MUST appear 3 times per week
+  'pork': 2,     // MUST appear 2 times per week (includes ham)
+  'fish': 1,     // MUST appear 1 time per week
+  'shrimp': 1,   // MUST appear 1 time per week
+  'beef': 0      // Set to 0 to exclude beef, increase to include beef (e.g., 2)
 };
+// Total must equal 7 days: chicken(3) + pork(2) + fish(1) + shrimp(1) + beef(0) = 7
 
 const DAYS_OF_WEEK = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
@@ -484,12 +493,13 @@ function removeEmailRecipient() {
 
 /**
  * Determines the meat type based on the item name
+ * Ham is counted as pork
  */
 function getMeatType(meatItem) {
   const itemLower = meatItem.toLowerCase();
   
   if (itemLower.includes('chicken')) return 'chicken';
-  if (itemLower.includes('pork')) return 'pork';
+  if (itemLower.includes('pork') || itemLower.includes('ham')) return 'pork';
   if (itemLower.includes('fish')) return 'fish';
   if (itemLower.includes('shrimp')) return 'shrimp';
   if (itemLower.includes('beef')) return 'beef';
@@ -498,13 +508,21 @@ function getMeatType(meatItem) {
 }
 
 /**
- * Picks a weekly menu (7 days) respecting the meat type limits,
- * ensuring no meat is repeated on consecutive days,
+ * Picks a weekly menu (7 days) with EXACT meat type requirements,
+ * ensuring no meat TYPE is repeated on consecutive days,
  * ensuring each specific meat item is used only once per week,
- * ensuring starches appear max 3 times per week,
- * ensuring veggies appear max 2 times per week,
+ * ensuring starches appear max 3 times per week each,
+ * ensuring veggies appear max 2 times per week each,
  * avoiding recently used meal combinations (last 4 weeks),
  * and checking for special dates/meals
+ * 
+ * IMPORTANT: Meat counts are REQUIRED (not maximums):
+ * - Chicken: exactly 3 times per week
+ * - Pork (includes ham): exactly 2 times per week
+ * - Fish: exactly 1 time per week
+ * - Shrimp: exactly 1 time per week
+ * - Beef: 0 by default (configurable)
+ * Total must equal 7 days per week
  */
 function pickWeeklyMenu(startDate = null) {
   // If no start date provided, use next Sunday
@@ -544,6 +562,49 @@ function pickWeeklyMenu(startDate = null) {
     const type = getMeatType(meat);
     meatsByType[type].push(meat);
   });
+  
+  // Validate we have enough meat options for each required type
+  for (const [type, count] of Object.entries(LIMITS)) {
+    if (count > 0 && meatsByType[type].length < count) {
+      throw new Error(`Not enough ${type} options. Need ${count}, but only have ${meatsByType[type].length}. Add more ${type} items to column A.`);
+    }
+  }
+  
+  // Build the required meat type schedule for the week
+  // This ensures exact counts: 3 chicken, 2 pork, 1 fish, 1 shrimp, 0 beef (or as configured)
+  const meatTypeSchedule = [];
+  for (const [type, count] of Object.entries(LIMITS)) {
+    for (let i = 0; i < count; i++) {
+      meatTypeSchedule.push(type);
+    }
+  }
+  
+  // Shuffle the schedule to avoid patterns, but ensure no consecutive same types
+  let shuffled = false;
+  let shuffleAttempts = 0;
+  const maxShuffleAttempts = 100;
+  
+  while (!shuffled && shuffleAttempts < maxShuffleAttempts) {
+    shuffleAttempts++;
+    // Fisher-Yates shuffle
+    for (let i = meatTypeSchedule.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [meatTypeSchedule[i], meatTypeSchedule[j]] = [meatTypeSchedule[j], meatTypeSchedule[i]];
+    }
+    
+    // Check if no consecutive same types
+    let hasConsecutive = false;
+    for (let i = 0; i < meatTypeSchedule.length - 1; i++) {
+      if (meatTypeSchedule[i] === meatTypeSchedule[i + 1]) {
+        hasConsecutive = true;
+        break;
+      }
+    }
+    
+    if (!hasConsecutive) {
+      shuffled = true;
+    }
+  }
   
   // Initialize starch and veggie counts
   data.starches.forEach(starch => starchCounts[starch] = 0);
@@ -600,58 +661,53 @@ function pickWeeklyMenu(startDate = null) {
       continue; // Skip to next day
     }
     
-    // Otherwise, pick normally
+    // Otherwise, pick normally using the pre-determined meat type schedule
     let attempts = 0;
     const maxAttempts = 100;
     
-    // Try to pick a meat that meets all constraints
+    // Get the required meat type for this day from our schedule
+    const requiredMeatType = meatTypeSchedule[day];
+    const availableMeatsOfType = meatsByType[requiredMeatType];
+    
+    // Try to pick a specific meat item of the required type that meets constraints
     while (meat === null && attempts < maxAttempts) {
       attempts++;
       
-      // Get a random meat
-      const randomMeat = data.meats[Math.floor(Math.random() * data.meats.length)];
-      const meatType = getMeatType(randomMeat);
+      // Get a random meat of the required type
+      const randomMeat = availableMeatsOfType[Math.floor(Math.random() * availableMeatsOfType.length)];
       
-      // Check all constraints:
-      // 1. Not used this week yet
-      // 2. Different from previous day
-      // 3. Within type limits
+      // Check constraints:
+      // 1. Not used this week yet (each specific meat used only once)
+      // 2. Different from previous day (no consecutive repeats)
       const notUsedThisWeek = !usedMeats.has(randomMeat);
       const isDifferentFromPrevious = (previousMeat === null || randomMeat !== previousMeat);
-      const isWithinLimits = (meatType === 'other' || meatCounts[meatType] < LIMITS[meatType]);
       
-      if (notUsedThisWeek && isDifferentFromPrevious && isWithinLimits) {
+      if (notUsedThisWeek && isDifferentFromPrevious) {
         meat = randomMeat;
         usedMeats.add(randomMeat); // Mark this meat as used
-        if (meatType !== 'other') {
-          meatCounts[meatType]++;
-        }
+        meatCounts[requiredMeatType]++;
       }
     }
     
-    // Fallback if we couldn't find a valid meat
+    // Fallback if we couldn't find a valid meat of the required type
     if (meat === null) {
-      // Try to find any meat that hasn't been used and is different from previous
-      for (let i = 0; i < data.meats.length; i++) {
-        if (!usedMeats.has(data.meats[i]) && data.meats[i] !== previousMeat) {
-          meat = data.meats[i];
+      // Try to find any unused meat of the required type (ignore consecutive day rule)
+      for (let i = 0; i < availableMeatsOfType.length; i++) {
+        if (!usedMeats.has(availableMeatsOfType[i])) {
+          meat = availableMeatsOfType[i];
           usedMeats.add(meat);
+          meatCounts[requiredMeatType]++;
           break;
         }
       }
-      // Second fallback: just find any unused meat
-      if (meat === null) {
-        for (let i = 0; i < data.meats.length; i++) {
-          if (!usedMeats.has(data.meats[i])) {
-            meat = data.meats[i];
-            usedMeats.add(meat);
-            break;
-          }
-        }
+      // Ultimate fallback: just use first available meat of required type
+      if (meat === null && availableMeatsOfType.length > 0) {
+        meat = availableMeatsOfType[0];
+        meatCounts[requiredMeatType]++;
       }
-      // Ultimate fallback (should rarely happen if you have enough meat options)
+      // If still null, throw error - not enough meat options
       if (meat === null) {
-        meat = data.meats[0];
+        throw new Error(`Unable to find enough ${requiredMeatType} options. Please add more ${requiredMeatType} items to column A.`);
       }
     }
     
